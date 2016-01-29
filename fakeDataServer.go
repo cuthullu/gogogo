@@ -7,6 +7,7 @@ import (
     "os"
     "strings"
     "time"
+    "libchan"
 )
 
 func check(e error) {
@@ -23,13 +24,12 @@ func getNow() string {
     tNow := time.Now()
 
     //Cuz I work harder than the markets
-    tNow = tNow.Add(time.Hour * -7 )
+    //tNow = tNow.Add(time.Hour * -7 )
 
     return tNow.Format("150405")
 }
 
-func tickerStreamer(path string, line chan string, finished chan string) {
-    
+func tickerStreamer(path string, outChan chan string, finished chan string) {
     
     f, err := os.Open(path)
     check(err)
@@ -37,16 +37,14 @@ func tickerStreamer(path string, line chan string, finished chan string) {
     defer func(){finished <- "Finished reading: " + path}()
     bufr := bufio.NewReader(f)
 
-    //Print header
+    //Throw away header
     dat, _, err := bufr.ReadLine();
-    fmt.Println("Reading: " + path)
-    fmt.Println(string(dat))
     
-    // Fast forward to now
-    t := getNow()
-
+    tNow := getNow()
     tin := "0"
-    for tin < t{
+
+    //Fast forward input to current time
+    for tin < tNow{
         dat, _, err = bufr.ReadLine();
         if err != nil {
             return
@@ -54,32 +52,33 @@ func tickerStreamer(path string, line chan string, finished chan string) {
         tin = getTime(string(dat))
     }
 
+    // Print input at current second. Sleep if input is after current second
     for {
         dat, _, err = bufr.ReadLine();
         if err != nil {
             return
         }
         tin = getTime(string(dat))
-        for tin > t {
+        for tin > tNow {
             time.Sleep(time.Millisecond * 500)
-            t = getNow()
+            tNow = getNow()
         }
-        line <- string(dat)
+        outChan <- string(dat)
 
     }
     
 }
 
-func readAllTheDatas(dataLine chan string) {
-    defer close(dataLine)
+func readAllTheDatas(outChan chan string) {
+    defer close(outChan)
+    fileFinishes := make(chan string)
 
     dir := "./data"
     files, _ := ioutil.ReadDir(dir)
-    fileFinishes := make(chan string)
+    
     for _, f := range files {
-        //f := files[0]
         path := dir + "/" + f.Name()
-        go tickerStreamer(path, dataLine, fileFinishes)
+        go tickerStreamer(path, outChan, fileFinishes)
     }
 
     for range files {
@@ -89,10 +88,11 @@ func readAllTheDatas(dataLine chan string) {
 }
 
 func main() {
-    dataLine := make(chan string)
-    go readAllTheDatas(dataLine)
-    for range dataLine {
-        line := <- dataLine
+    outChan := make(chan string)
+    go readAllTheDatas(outChan)
+    for range outChan {
+        line := <- outChan
         fmt.Println(line)
+
     }
 }
