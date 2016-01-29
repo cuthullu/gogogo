@@ -7,8 +7,22 @@ import (
     "os"
     "strings"
     "time"
-    "libchan"
+    "net"
+
+    "github.com/docker/libchan"
+    "github.com/docker/libchan/spdy"
 )
+
+type RemoteCommand struct {
+    Cmd string
+    Args [] string
+    OutChan libchan.Sender
+
+}
+
+type RemoteLine struct {
+    Line string
+}
 
 func check(e error) {
     if(e != nil) {
@@ -87,12 +101,60 @@ func readAllTheDatas(outChan chan string) {
     }
 }
 
+func listen(listener net.Listener, outs *[]libchan.Sender) {
+    for {
+        c, err := listener.Accept()
+        check(err)
+
+        p, err := spdy.NewSpdyStreamProvider(c, true)
+        check(err)
+
+        t := spdy.NewTransport(p)
+
+        go func() {
+            for {
+                receiver, err := t.WaitReceiveChannel()
+                check(err)
+                command := &RemoteCommand{}
+                err = receiver.Receive(command)
+                check(err)
+
+                *outs = append(*outs, command.OutChan)
+
+            }
+        }()
+    }
+}
+
+
+func addOutListener(outs *[]int) {
+    *outs = append(*outs, 5)
+}   
+
 func main() {
     outChan := make(chan string)
     go readAllTheDatas(outChan)
+
+    var listener net.Listener
+    var err error
+
+    var outs []libchan.Sender
+
+
+    listener, err = net.Listen("tcp", "localhost:9323")
+
+    check(err)
+    go listen(listener, &outs)
+
     for range outChan {
         line := <- outChan
         fmt.Println(line)
+        rLine := &RemoteLine{
+            Line : line,
+        }
+        for _, out := range outs {
+            out.Send(rLine)
+        }
 
     }
 }
