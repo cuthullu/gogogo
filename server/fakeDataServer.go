@@ -141,6 +141,8 @@ func main() {
     dataDir := flag.String("dataDir", "data", "The directory what which has the datas in it")
     hostAdd := flag.String("hostAdd", "localhost", "The host address to listen on")
     port := flag.String("port", "9323", "The port to listen on")
+    flag.Parse()
+    fmt.Println("Config: ", *dataDir, *hostAdd, *port)
     
 
     go readAllTheDatas(*dataDir, outChan)
@@ -158,13 +160,13 @@ func main() {
 
     for range outChan {
         line := <- outChan
-        fmt.Println(line)
         rLine := &RemoteLine{
             Line : line,
         }
         for _, client := range clients {
             client.Send(rLine)
         }
+
 
     }
 }
