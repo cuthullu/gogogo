@@ -13,6 +13,7 @@ type RemoteCommand struct {
     Cmd string
     Args [] string
     OutChan libchan.Sender
+    Closer libchan.Receiver
 
 }
 
@@ -39,11 +40,14 @@ func main() {
 	check(err)
 
 	receiver, remoteSender := libchan.Pipe()
+	
+	closeReceiver, _ := libchan.Pipe()
 
 	command := &RemoteCommand {
 		Cmd : "attach",
 		Args : make([]string, 3),
 		OutChan : remoteSender,
+		Closer : closeReceiver,
 	}
 
 	err = sender.Send(command)
@@ -54,4 +58,6 @@ func main() {
 		err = receiver.Receive(rLine)
 		fmt.Println(rLine.Line)
 	}
+
+	
 }

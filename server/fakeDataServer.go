@@ -8,6 +8,7 @@ import (
     "strings"
     "time"
     "net"
+    "flag"
 
     "github.com/docker/libchan"
     "github.com/docker/libchan/spdy"
@@ -15,7 +16,7 @@ import (
 
 type RemoteCommand struct {
     Cmd string
-    Args [] string
+    Args []string
     OutChan libchan.Sender
 
 }
@@ -32,6 +33,10 @@ func check(e error) {
 
 func getTime(line string) string{
     return strings.Split(line, ",")[3]
+}
+
+func getTicker(line string) string {
+    return strings.Split(line, ",")[0]
 }
 
 func getNow() string {
@@ -83,11 +88,10 @@ func tickerStreamer(path string, outChan chan string, finished chan string) {
     
 }
 
-func readAllTheDatas(outChan chan string) {
+func readAllTheDatas(dir string, outChan chan string) {
     defer close(outChan)
     fileFinishes := make(chan string)
 
-    dir := "./data"
     files, _ := ioutil.ReadDir(dir)
     
     for _, f := range files {
@@ -101,7 +105,7 @@ func readAllTheDatas(outChan chan string) {
     }
 }
 
-func listen(listener net.Listener, outs *[]libchan.Sender) {
+func listen(listener net.Listener, clients *[]libchan.Sender) {
     for {
         c, err := listener.Accept()
         check(err)
@@ -119,7 +123,7 @@ func listen(listener net.Listener, outs *[]libchan.Sender) {
                 err = receiver.Receive(command)
                 check(err)
 
-                *outs = append(*outs, command.OutChan)
+                *clients = append(*clients, command.OutChan)
 
             }
         }()
@@ -133,18 +137,24 @@ func addOutListener(outs *[]int) {
 
 func main() {
     outChan := make(chan string)
-    go readAllTheDatas(outChan)
+
+    dataDir := flag.String("dataDir", "data", "The directory what which has the datas in it")
+    hostAdd := flag.String("hostAdd", "localhost", "The host address to listen on")
+    port := flag.String("port", "9323", "The port to listen on")
+    
+
+    go readAllTheDatas(*dataDir, outChan)
 
     var listener net.Listener
     var err error
 
-    var outs []libchan.Sender
+    var clients []libchan.Sender
 
 
-    listener, err = net.Listen("tcp", "localhost:9323")
+    listener, err = net.Listen("tcp", *hostAdd + ":" + *port)
 
     check(err)
-    go listen(listener, &outs)
+    go listen(listener, &clients)
 
     for range outChan {
         line := <- outChan
@@ -152,8 +162,8 @@ func main() {
         rLine := &RemoteLine{
             Line : line,
         }
-        for _, out := range outs {
-            out.Send(rLine)
+        for _, client := range clients {
+            client.Send(rLine)
         }
 
     }
