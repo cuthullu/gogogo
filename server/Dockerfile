@@ -8,7 +8,6 @@ ADD ./data /var/lib/deserver
 RUN go get ./src/mygo/server
 RUN go install ./src/mygo/server
 
-
-ENTRYPOINT /go/bin/server -port=8080 -dataDir=/var/lib/deserver
+ENTRYPOINT /go/bin/server -hostAdd 0.0.0.0 -port=8080 -dataDir=/var/lib/deserver
 
 EXPOSE 8080

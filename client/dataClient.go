@@ -29,7 +29,7 @@ func check(e error) {
 
 func main() {
 
-	client, err := net.Dial("tcp", "0.0.0.0:32775")
+	client, err := net.Dial("tcp", "localhost:80")
 	check(err)
 
 	p, err := spdy.NewSpdyStreamProvider(client, false)
