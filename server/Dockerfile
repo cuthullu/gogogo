@@ -1,13 +1,13 @@
 FROM golang:latest 
 
-ADD ./fakeDataServer.go /go/src/mygo/server/
+ADD ./fakeDataServer.go /go/src/gogogo/server/
 
 RUN mkdir /var/lib/dserver
 ADD ./data /var/lib/deserver
 
-RUN go get ./src/mygo/server
-RUN go install ./src/mygo/server
+RUN go get ./src/gogogo/server
+RUN go install ./src/gogogo/server
 
-ENTRYPOINT /go/bin/server -hostAdd 0.0.0.0 -port=8080 -dataDir=/var/lib/deserver
+ENTRYPOINT /go/bin/server -hostAdd 172.17.0.2 -port=9900 -dataDir=/var/lib/deserver
 
 EXPOSE 8080

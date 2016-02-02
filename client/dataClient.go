@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"flag"
 
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
@@ -29,7 +30,12 @@ func check(e error) {
 
 func main() {
 
-	client, err := net.Dial("tcp", "localhost:80")
+    remote := flag.String("remote", "localhost", "Where to find that there server there")
+    port := flag.String("port", "8080", "The port to listen on")
+    flag.Parse()
+    fmt.Println("Config: ", *remote, *port)
+    
+	client, err := net.Dial("tcp", *remote + ":" + *port)
 	check(err)
 
 	p, err := spdy.NewSpdyStreamProvider(client, false)
