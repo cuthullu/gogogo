@@ -1,6 +1,6 @@
 #! /bin/bash
 
-cd $GOPATH
+cd $GOPATH/src/gogogo
 go get
 
 go test gogogo/server
